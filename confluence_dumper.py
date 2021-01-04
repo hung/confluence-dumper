@@ -427,14 +427,19 @@ def main():
 
     # Welcome output
     print_welcome_output()
-    # Delete old export
+    # Don't delete old export folder prevent re-dump
     if os.path.exists(settings.EXPORT_FOLDER):
-        shutil.rmtree(settings.EXPORT_FOLDER)
-    os.makedirs(settings.EXPORT_FOLDER)
+    #    shutil.rmtree(settings.EXPORT_FOLDER)
+        print("Export folder exists")
+    else:
+        os.makedirs(settings.EXPORT_FOLDER)
 
     # Read HTML template
     template_file = open(settings.TEMPLATE_FILE)
     html_template = template_file.read()
+
+    #Login first
+    r = utils.http_post_login(settings.CONFLUENCE_BASE_URL + "/login.action", auth=settings.HTTP_AUTHENTICATION)
 
     # Fetch all spaces if spaces were not configured via settings
     if len(settings.SPACES_TO_EXPORT) > 0:

@@ -13,12 +13,13 @@
 # Confluence URL
 CONFLUENCE_BASE_URL = 'http://192.168.240.188:8090'
 
+
 # A list of space keys to export (leave it empty to export all available spaces)
 SPACES_TO_EXPORT = []
 
 # Confluence authentication
 # Example for HTTP Basic Authentication: ('johndoe', 'sup3rs3cur3pw')
-HTTP_AUTHENTICATION = ('johndoe', 'sup3rs3cur3pw')
+HTTP_AUTHENTICATION = {'username':'johndoe','password':'sup3rs3cur3pw'}
 
 # Verify x.509 certificate of confluence http server
 VERIFY_PEER_CERTIFICATE = True

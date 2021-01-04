@@ -15,11 +15,37 @@ import shutil
 import re
 import urllib
 
+mySession = None
 
 class ConfluenceException(Exception):
     """ Exception for Confluence export issues """
     def __init__(self, message):
         super(ConfluenceException, self).__init__(message)
+
+def http_post_login(request_url, auth=None, headers=None, verify_peer_certificate=True, proxies=None):
+    """ Requests a HTTP url and returns a requested JSON response.
+
+    :param request_url: HTTP URL to request.
+    :param auth: (optional) Auth tuple to use HTTP Auth (supported: Basic/Digest/Custom).
+    :param headers: (optional) Dictionary of HTTP Headers to send with the :class:`Request`.
+    :param verify_peer_certificate: (optional) Flag to decide whether peer certificate has to be validated.
+    :param proxies: (optional) Dictionary mapping protocol to the URL of the proxy.
+    :returns: JSON response.
+    :raises: ConfluenceException in the case of the server does not answer HTTP code 200.
+    """
+    data = {'os_username': auth['username'],'os_password': auth['password'],'os_cookie': 'true','login': 'Log in','os_destination': ''}
+
+    global mySession
+    
+    mySession = requests.Session()
+    
+    mySession.get(request_url, verify=verify_peer_certificate, proxies=proxies)
+    response = mySession.post(request_url, data, verify=False)
+    
+    if 200 == response.status_code:
+        return response
+    else:
+        response = None
 
 
 def http_get(request_url, auth=None, headers=None, verify_peer_certificate=True, proxies=None):
@@ -33,7 +59,9 @@ def http_get(request_url, auth=None, headers=None, verify_peer_certificate=True,
     :returns: JSON response.
     :raises: ConfluenceException in the case of the server does not answer HTTP code 200.
     """
-    response = requests.get(request_url, auth=auth, headers=headers, verify=verify_peer_certificate, proxies=proxies)
+    #response = requests.get(request_url, auth=auth, headers=headers, verify=verify_peer_certificate, proxies=proxies)
+    
+    response = mySession.get(request_url, stream=True, verify=verify_peer_certificate, proxies=proxies)
     if 200 == response.status_code:
         return response.json()
     else:
@@ -53,8 +81,10 @@ def http_download_binary_file(request_url, file_path, auth=None, headers=None, v
     :param proxies: (optional) Dictionary mapping protocol to the URL of the proxy.
     :raises: ConfluenceException in the case of the server does not answer with HTTP code 200.
     """
-    response = requests.get(request_url, stream=True, auth=auth, headers=headers, verify=verify_peer_certificate,
-                            proxies=proxies)
+    #response = requests.get(request_url, stream=True, auth=auth, headers=headers, verify=verify_peer_certificate,proxies=proxies)
+    
+    response = mySession.get(request_url, stream=True, verify=verify_peer_certificate, proxies=proxies)
+    
     if 200 == response.status_code:
         with open(file_path, 'wb') as downloaded_file:
             response.raw.decode_content = True
@@ -74,8 +104,8 @@ def write_2_file(path, content):
     :param content: String content to persist.
     """
     try:
-        with open(path, 'w') as the_file:
-            the_file.write(content.encode('utf8'))
+        with open(path, 'w', encoding='utf8') as the_file:
+            the_file.write(content)
     except:
         print("File could not be written")
 
@@ -97,7 +127,7 @@ def write_html_2_file(path, title, content, html_template, additional_headers=No
     # Note: One backslash has to be escaped with two avoid that backslashes are interpreted as escape chars
     replacements = {'title': title, 'content': content, 'additional_headers': additional_html_headers}
 
-    for placeholder, replacement in replacements.iteritems():
+    for placeholder, replacement in replacements.items():
         regex_placeholder = r'{%\s*' + placeholder + r'\s*%\}'
         try:
             html_content = re.sub(regex_placeholder, replacement.replace('\\', '\\\\'), html_content,
@@ -124,7 +154,7 @@ def decode_url(encoded_url):
     :param encoded_url: Encoded URL.
     :returns: Decoded URL.
     """
-    return urllib.unquote(encoded_url.encode('utf8')).decode('utf8')
+    return urllib.parse.unquote(encoded_url, encoding='utf8')
 
 
 def encode_url(decoded_url):
@@ -133,7 +163,7 @@ def encode_url(decoded_url):
     :param decoded_url: Decoded URL.
     :returns: Encoded URL.
     """
-    return urllib.quote(decoded_url.encode('utf8')).encode('utf8')
+    return urllib.parse.quote(decoded_url, encoding='utf8')
 
 
 def is_file_format(file_name, file_extensions):
